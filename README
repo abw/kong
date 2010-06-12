@@ -1,0 +1,11 @@
+This is a playground project for experimenting with the Raphaël Javascript
+library which provides a wrapper around the HTML canvas object.  See
+http://raphaeljs.com/ for further details.
+
+It is a re-implementation of the classic gorilla.bas game. See here for more
+info: http://blog.yapb.net/post/2009/12/29/How-I-became-a-programmer.aspx
+Back in the early 90's I wrote my own version of the game (or rather, adapted
+the original source code).  So this is an opportunity for a bit of nostalgia 
+while getting to grips with Raphaël.
+
+-- Andy Wardley June 2010
