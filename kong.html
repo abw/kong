@@ -1,0 +1,36 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Stroppy Kong and the Atomic Bananas</title>
+    <script src="raphael-min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="kong.js" type="text/javascript" charset="utf-8"></script>
+    <style type="text/css" media="screen">
+      body { 
+          background-color: white 
+      }
+      #kong {
+          margin: 0;
+          width:  800px;
+          height: 600px;
+          margin: 100px auto;
+          border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="kong"></div>
+    <script>
+        $(document).ready(
+            function() {
+                var kong  = $('#kong'),
+                    width = kong.width()
+                    height = kong.height();
+                    
+                Raphael("kong", width, height).kong(width, height);
+            }
+        );
+    </script>
+  </body>
+</html>
