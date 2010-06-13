@@ -3,6 +3,7 @@ var Kong = {
         width:      800,
         height:     600,
         max_wind:   10,
+        trace:      0,
         font:       'Sansation'
     },
     debug: (window.console && window.console.log)
@@ -16,6 +17,7 @@ Raphael.fn.Kong = function (options) {
         width  = config.width,
         height = config.height,
         font   = paper.getFont(config.font),
+        trace  = config.trace ? function(m) { alert(m) } : function() { },
         gameno = 0,
         game;
 
@@ -50,6 +52,7 @@ Raphael.fn.Kong = function (options) {
         Kong.debug('draw_scene()');
 
         // sun / sky grad
+        trace('Add a radial gradient for sky/sun');
         paper
             .circle(sunx, suny, sunx * 2)
             .attr({
@@ -58,6 +61,7 @@ Raphael.fn.Kong = function (options) {
             });
 
         // sun's rays
+        trace('Add some sunbeams');
         for (var n = 0; n < rays; n++) {
             var r = rayd * n * 1.5;
             paper
@@ -77,6 +81,7 @@ Raphael.fn.Kong = function (options) {
         }
 
         // central sun circle to block rays
+        trace("Add the sun's core to mask sunbeams");
         paper
             .circle(sunx, suny, sunr)
             .attr({
