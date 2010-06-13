@@ -53,7 +53,7 @@ Raphael.fn.Kong = function (options) {
         paper
             .circle(sunx, suny, sunx * 2)
             .attr({
-                gradient:   "r#fac710-#ffeeaa:07-#48cbf0:14-#129:50",
+                gradient:   "r#fc1-#fea:07-#48cbf0:14-#129:50",
                 stroke:     0
             });
 
@@ -84,6 +84,9 @@ Raphael.fn.Kong = function (options) {
                 stroke:     0
             });
 
+        // TODO:
+        //  draw clouds and animate according to wind speed
+        //  draw buildings with windows - some lit, some unlit, changing
 
         // for testing
         draw_wind_arrow();
@@ -95,12 +98,24 @@ Raphael.fn.Kong = function (options) {
             .text(width / 2, 20, "Wind: " + game.wind)
             .attr({ 'font-size': 20 });
 
+        // TODO: draw arrow showing wind direction and speed
+
 //      paper.print(width/2, 120, "Wind: " + game.wind, font, 60)
 //           .attr({fill: "#f70"});
+
     };
 
     function play_game() {
         Kong.debug('play_game()');
+        // TODO: 
+        // while no-one has won, 
+        //   player n:
+        //     input values
+        //     throw banana
+        //     plot trajectory
+        //     collision detection
+        //     if building hit then damage building
+        //     if gorilla hit then explode gorilla and end game
     };
 
     function game_loop() {
