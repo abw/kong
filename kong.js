@@ -2,9 +2,25 @@ var Kong = {
     defaults: {
         width:      800,
         height:     600,
-        max_wind:   10,
+        max_wind:   20,
+        n_clouds:   3,
         trace:      0,
-        font:       'Sansation'
+        speed:      8,           // multiplier for pixels/second * wind speed
+        font:       'Sansation',
+        cloud_style: {
+            fill: '#fff', 
+            stroke: '#ccc',
+            'stroke-width': 4
+        },
+        cloud_paths: [
+            // Clouds were created as composite paths using Illustrator, 
+            // merged and then exported as SVG.  The paths are centred at 
+            // 0, 0 and are enclosed by a bounding box 2 units wide and 1 
+            // unit high.  They should be scaled to size.
+            "M2.835-0.223c0-0.275-0.361-0.506-0.842-0.561c0.016-0.038,0.025-0.079,0.025-0.121c0-0.283-0.378-0.513-0.845-0.513c-0.333,0-0.62,0.118-0.757,0.288c-0.029,0-0.058-0.002-0.087-0.002c-1.072,0-1.94,0.434-1.94,0.97c0,0.014,0.001,0.027,0.002,0.039c-0.712,0.104-1.227,0.4-1.227,0.751c0,0.435,0.798,0.788,1.781,0.788c0.528,0,1.003-0.101,1.329-0.264c0.249,0.162,0.628,0.264,1.053,0.264c0.75,0,1.358-0.32,1.358-0.717c0-0.172-0.114-0.329-0.306-0.453C2.655,0.144,2.835-0.027,2.835-0.223z",
+            "M2.834-0.12c0-0.383-0.609-0.693-1.373-0.71c0.039-0.05,0.06-0.105,0.06-0.163c0-0.234-0.349-0.425-0.779-0.425c-0.389,0-0.708,0.155-0.767,0.358c-0.15-0.038-0.313-0.059-0.485-0.059c-0.586,0-1.08,0.243-1.232,0.573c-0.627,0.082-1.093,0.377-1.093,0.73c0,0.417,0.646,0.754,1.442,0.754c0.194,0,0.378-0.02,0.547-0.057c0.093,0.302,0.693,0.536,1.423,0.536c0.636,0,1.174-0.178,1.362-0.423c0.338-0.051,0.589-0.221,0.589-0.426c0-0.072-0.034-0.139-0.088-0.199C2.685,0.242,2.834,0.07,2.834-0.12z",
+            "M2.834-0.346c0-0.517-0.804-0.935-1.795-0.935c-0.328,0-0.634,0.046-0.898,0.126c-0.176-0.16-0.438-0.262-0.731-0.262c-0.493,0-0.899,0.289-0.954,0.66c-0.734,0.074-1.291,0.418-1.291,0.833c0,0.462,0.69,0.837,1.548,0.847c0.25,0.293,0.756,0.494,1.339,0.494c0.808,0,1.466-0.385,1.503-0.868C2.295,0.433,2.834,0.076,2.834-0.346z"
+        ]
     },
     debug: (window.console && window.console.log)
         ? function() { window.console.log.apply(window.console, arguments); }
@@ -17,7 +33,7 @@ Raphael.fn.Kong = function (options) {
         width  = config.width,
         height = config.height,
         font   = paper.getFont(config.font),
-        trace  = config.trace ? function(m) { alert(m) } : function() { },
+        trace  = config.trace ? function(m) { alert(m); } : function() { },
         gameno = 0,
         game;
 
@@ -27,8 +43,8 @@ Raphael.fn.Kong = function (options) {
         return degrees * Math.PI / 180;
     };
 
-    function random(max) {
-        return Math.round( Math.random() * max );
+    function random(min, max) {
+        return min + Math.round( Math.random() * (max - min) );
     };
 
     function init_game() {
@@ -36,7 +52,7 @@ Raphael.fn.Kong = function (options) {
             // game counter for stats
             no:     ++gameno,
             // wind can be up to +ve or -ve max_wind 
-            wind:   random(config.max_wind * 2) - config.max_wind
+            wind:   random(-config.max_wind, config.max_wind)
         };
         Kong.debug('init_game() => %o', game);
         return game;
@@ -47,7 +63,8 @@ Raphael.fn.Kong = function (options) {
             suny = height * 0.1,
             sunr = height * 0.15,
             rayd = 20,               // 30 degree ray
-            rays = 360 / (rayd * 1.5);
+            rays = 360 / (rayd * 1.5),
+            n;
 
         Kong.debug('draw_scene()');
 
@@ -62,7 +79,7 @@ Raphael.fn.Kong = function (options) {
 
         // sun's rays
         trace('Add some sunbeams');
-        for (var n = 0; n < rays; n++) {
+        for (n = 0; n < rays; n++) {
             var r = rayd * n * 1.5;
             paper
                 .path([
@@ -89,14 +106,81 @@ Raphael.fn.Kong = function (options) {
                 stroke:     0
             });
 
+        // clouds - I'd really like to make clouds from composite shapes...
+        var cwidth = width / config.n_clouds;
+        var cheight = 20;
+        var csize   = 60;
+        var cspeed  = 1100;
+        for (n = 0; n < config.n_clouds; n++) {
+            cloud(
+                n * cwidth + cwidth / 2 + random(-cwidth / 4, cwidth / 4), 
+                cheight, 
+                csize,
+                game.wind,
+                cspeed
+            );
+            // quick hack
+            cheight += random(50, 100);
+            csize   -= random(10, csize / 4);
+            cspeed  -= 200;
+        }
+
         // TODO:
-        //  draw clouds and animate according to wind speed
         //  draw buildings with windows - some lit, some unlit, changing
+
 
         // for testing
         draw_wind_arrow();
     };
 
+    function cloud(x, y, size, wind, speed) {
+        Kong.debug('drawing cloud at %s, %s with size %s and wind %s', x, y, size, wind);
+        var paths = config.cloud_paths;
+        var cloud = paper
+            .path( paths[ random(0, paths.length - 1) ] )
+            .scale(size, size * 0.5)
+            .translate(x, y)
+            .attr(config.cloud_style);
+        var dx, rx;
+
+        if (wind > 0) {
+            // move to the right then reset by moving all the way left
+            dx =  width - x + size * 3;
+            rx = -width - size * 6;
+        }
+        else if (wind < 0) {
+            // move to the left then resetby moving right
+            dx = -x - size * 3;
+            rx = width + size * 6;
+        }
+        else {
+            return cloud;
+        }
+        
+       // Compute the number of milliseconds required to move off screen
+       // based on the wind speed and config.speed scaling factor, with 
+       // a little extra randomness thrown in for good measure.  First time
+       // around we're moving dx pixels, based on the original cloud position.
+       // Subsequent animations traverse the whole screen plus a bit (rx 
+       // pixels in rt milliseconds).
+        var dt = Math.abs(dx / config.speed / wind * speed);
+        var rt = Math.abs(rx / config.speed / wind * speed);
+
+        function reset_cloud() {
+            Kong.debug('Resetting cloud position: %s / %s', rx, rt);
+            cloud.translate(rx, 0)
+                 .animate(
+                     { translation: -rx + "," + 0 }, 
+                     rt, reset_cloud
+                 );
+        };
+        
+        cloud.animate(
+            { translation: dx + "," + 0 }, dt,
+            reset_cloud
+        );
+    };
+        
     function draw_wind_arrow() {
         var wind = game.wind;
         paper
