@@ -1,3 +1,12 @@
+// Implementation of the classic gorillas.bas game in Javascript, using 
+// Raphael. Strictly just for fun.
+//
+// Written by Andy Wardley, June 2010.  
+//
+// This is free software distributed under the terms of the Artistic 
+// Licence 2.0.
+//
+
 var Kong = {
     defaults: {
         width:      800,
@@ -11,12 +20,6 @@ var Kong = {
         stories:    16,
         windows:     6,
         building_gap: 0,
-        cloud_style: {
-            fill: '#fff', 
-            stroke: '#ccc',
-            opacity: 1.0,
-            'stroke-width': 4
-        },
         cloud_paths: [
             // Clouds were created as composite paths using Illustrator, 
             // merged and then exported as SVG.  The paths are centred at 
@@ -26,28 +29,35 @@ var Kong = {
             "M2.834-0.12c0-0.383-0.609-0.693-1.373-0.71c0.039-0.05,0.06-0.105,0.06-0.163c0-0.234-0.349-0.425-0.779-0.425c-0.389,0-0.708,0.155-0.767,0.358c-0.15-0.038-0.313-0.059-0.485-0.059c-0.586,0-1.08,0.243-1.232,0.573c-0.627,0.082-1.093,0.377-1.093,0.73c0,0.417,0.646,0.754,1.442,0.754c0.194,0,0.378-0.02,0.547-0.057c0.093,0.302,0.693,0.536,1.423,0.536c0.636,0,1.174-0.178,1.362-0.423c0.338-0.051,0.589-0.221,0.589-0.426c0-0.072-0.034-0.139-0.088-0.199C2.685,0.242,2.834,0.07,2.834-0.12z",
             "M2.834-0.346c0-0.517-0.804-0.935-1.795-0.935c-0.328,0-0.634,0.046-0.898,0.126c-0.176-0.16-0.438-0.262-0.731-0.262c-0.493,0-0.899,0.289-0.954,0.66c-0.734,0.074-1.291,0.418-1.291,0.833c0,0.462,0.69,0.837,1.548,0.847c0.25,0.293,0.756,0.494,1.339,0.494c0.808,0,1.466-0.385,1.503-0.868C2.295,0.433,2.834,0.076,2.834-0.346z"
         ],
+        cloud_style: {
+            fill:           '#fff', 
+            stroke:         '#ccc',
+            opacity:        1.0,
+            'stroke-width': 4
+        },
+        building_style: {
+            gradient:       "0-#aaa-#ddd",
+            stroke:         '#888',
+            'stroke-width': 2
+        },
         window_styles: [
             {
-                stroke: '#444',
-                'stroke-width': 1,
-                gradient: "90-#555-#666"
+                gradient:       "90-#555-#666",
+                stroke:         '#444',
+                'stroke-width': 1
             },
             {
-                stroke: '#996',
-                'stroke-width': 1,
-                gradient: "90-#ff4-#aa0"
+                gradient:       "90-#ff4-#aa0",
+                stroke:         '#996',
+                'stroke-width': 1
             }
-        ],
-        building_style: {
-            stroke: '#888',
-            'stroke-width': 2,
-            gradient: "0-#aaa-#ddd"
-        }
+        ]
     },
     debug: (window.console && window.console.log)
         ? function() { window.console.log.apply(window.console, arguments); }
         : function() { }
 };
+
 
 Raphael.fn.line = function (x1, y1, x2, y2) {
     return this.path(
@@ -55,6 +65,7 @@ Raphael.fn.line = function (x1, y1, x2, y2) {
         'L' + x2 + ',' + y2
     );
 };
+
 
 Raphael.fn.Kong = function (options) {
     var paper  = this,
@@ -150,7 +161,7 @@ Raphael.fn.Kong = function (options) {
                 game.wind,
                 cspeed
             );
-            // quick hack
+            // quick hack to vary cloud shape, position, etc.
             cheight += random(50, 100);
             csize   -= random(10, csize / 4);
             cspeed  -= 200;
@@ -160,7 +171,7 @@ Raphael.fn.Kong = function (options) {
         var bwidth  = (width - (config.building_gap * 2)) / config.buildings;
         for (n = 0; n < config.buildings; n++) {
             building(
-                n * bwidth, bwidth, Math.round(random(config.stories / 2, config.stories))
+                n * bwidth, bwidth, Math.round(random(config.stories / 3, config.stories))
             );
         }
 
@@ -214,6 +225,8 @@ Raphael.fn.Kong = function (options) {
             { translation: dx + "," + 0 }, dt,
             reset_cloud
         );
+        
+        return cloud;
     };
 
     function building(x, width, stories) {
@@ -233,17 +246,17 @@ Raphael.fn.Kong = function (options) {
             .attr(config.building_style);
 
         for (var i = 0; i < stories; i++) {
-            var h = height - i * sheight;
+            var hh = height - i * sheight;
 
             // line between floors
-            paper.line(x + 10, h, x + width - 10, h)
+            paper.line(x + wwidth, hh, x + width - wwidth, hh)
                  .attr({ stroke: '#aaa' });
 
             // windows, some on, some off
             for (var w = 0; w < config.windows; w++) {
                 var xx = x + (w * 2 + 1) * wwidth;
                 paper
-                    .rect(xx, h - wheight - woff, wwidth, wheight)
+                    .rect(xx, hh - wheight - woff, wwidth, wheight)
                     .attr(ws[random(0, 1)]);
             }
         }
