@@ -2,14 +2,19 @@ var Kong = {
     defaults: {
         width:      800,
         height:     600,
-        max_wind:   20,
-        n_clouds:   3,
+        max_wind:   9,
+        clouds:     3,
         trace:      0,
         speed:      8,           // multiplier for pixels/second * wind speed
         font:       'Sansation',
+        buildings:  10,
+        stories:    16,
+        windows:     6,
+        building_gap: 0,
         cloud_style: {
             fill: '#fff', 
             stroke: '#ccc',
+            opacity: 1.0,
             'stroke-width': 4
         },
         cloud_paths: [
@@ -20,11 +25,35 @@ var Kong = {
             "M2.835-0.223c0-0.275-0.361-0.506-0.842-0.561c0.016-0.038,0.025-0.079,0.025-0.121c0-0.283-0.378-0.513-0.845-0.513c-0.333,0-0.62,0.118-0.757,0.288c-0.029,0-0.058-0.002-0.087-0.002c-1.072,0-1.94,0.434-1.94,0.97c0,0.014,0.001,0.027,0.002,0.039c-0.712,0.104-1.227,0.4-1.227,0.751c0,0.435,0.798,0.788,1.781,0.788c0.528,0,1.003-0.101,1.329-0.264c0.249,0.162,0.628,0.264,1.053,0.264c0.75,0,1.358-0.32,1.358-0.717c0-0.172-0.114-0.329-0.306-0.453C2.655,0.144,2.835-0.027,2.835-0.223z",
             "M2.834-0.12c0-0.383-0.609-0.693-1.373-0.71c0.039-0.05,0.06-0.105,0.06-0.163c0-0.234-0.349-0.425-0.779-0.425c-0.389,0-0.708,0.155-0.767,0.358c-0.15-0.038-0.313-0.059-0.485-0.059c-0.586,0-1.08,0.243-1.232,0.573c-0.627,0.082-1.093,0.377-1.093,0.73c0,0.417,0.646,0.754,1.442,0.754c0.194,0,0.378-0.02,0.547-0.057c0.093,0.302,0.693,0.536,1.423,0.536c0.636,0,1.174-0.178,1.362-0.423c0.338-0.051,0.589-0.221,0.589-0.426c0-0.072-0.034-0.139-0.088-0.199C2.685,0.242,2.834,0.07,2.834-0.12z",
             "M2.834-0.346c0-0.517-0.804-0.935-1.795-0.935c-0.328,0-0.634,0.046-0.898,0.126c-0.176-0.16-0.438-0.262-0.731-0.262c-0.493,0-0.899,0.289-0.954,0.66c-0.734,0.074-1.291,0.418-1.291,0.833c0,0.462,0.69,0.837,1.548,0.847c0.25,0.293,0.756,0.494,1.339,0.494c0.808,0,1.466-0.385,1.503-0.868C2.295,0.433,2.834,0.076,2.834-0.346z"
-        ]
+        ],
+        window_styles: [
+            {
+                stroke: '#444',
+                'stroke-width': 1,
+                gradient: "90-#555-#666"
+            },
+            {
+                stroke: '#996',
+                'stroke-width': 1,
+                gradient: "90-#ff4-#aa0"
+            }
+        ],
+        building_style: {
+            stroke: '#888',
+            'stroke-width': 2,
+            gradient: "0-#aaa-#ddd"
+        }
     },
     debug: (window.console && window.console.log)
         ? function() { window.console.log.apply(window.console, arguments); }
         : function() { }
+};
+
+Raphael.fn.line = function (x1, y1, x2, y2) {
+    return this.path(
+        'M' + x1 + ',' + y1 +
+        'L' + x2 + ',' + y2
+    );
 };
 
 Raphael.fn.Kong = function (options) {
@@ -106,12 +135,14 @@ Raphael.fn.Kong = function (options) {
                 stroke:     0
             });
 
-        // clouds - I'd really like to make clouds from composite shapes...
-        var cwidth = width / config.n_clouds;
+        // clouds - I'd really like to make clouds from composite shapes
+        // but Raphael doesn't support that, so I'm using paths pre-defined
+        // in Illustrator.
+        var cwidth = width / config.clouds;
         var cheight = 20;
         var csize   = 60;
         var cspeed  = 1100;
-        for (n = 0; n < config.n_clouds; n++) {
+        for (n = 0; n < config.clouds; n++) {
             cloud(
                 n * cwidth + cwidth / 2 + random(-cwidth / 4, cwidth / 4), 
                 cheight, 
@@ -125,9 +156,13 @@ Raphael.fn.Kong = function (options) {
             cspeed  -= 200;
         }
 
-        // TODO:
-        //  draw buildings with windows - some lit, some unlit, changing
-
+        // buildings
+        var bwidth  = (width - (config.building_gap * 2)) / config.buildings;
+        for (n = 0; n < config.buildings; n++) {
+            building(
+                n * bwidth, bwidth, Math.round(random(config.stories / 2, config.stories))
+            );
+        }
 
         // for testing
         draw_wind_arrow();
@@ -180,7 +215,40 @@ Raphael.fn.Kong = function (options) {
             reset_cloud
         );
     };
-        
+
+    function building(x, width, stories) {
+        var sheight = height * 0.8 / config.stories;
+        var bgap    = config.building_gap;
+        var wwidth  = width / (config.windows * 2 + 1);  // add gaps
+        var wheight = sheight * 0.6;
+        var woff    = sheight * 0.2;
+        var h       = height - stories * sheight; 
+        var ws      = config.window_styles;
+
+        Kong.debug('building: %s,%s  %sx%s', x, height, width, height - stories * sheight);
+
+        // building
+        paper
+            .rect(x, h, width, stories * sheight)
+            .attr(config.building_style);
+
+        for (var i = 0; i < stories; i++) {
+            var h = height - i * sheight;
+
+            // line between floors
+            paper.line(x + 10, h, x + width - 10, h)
+                 .attr({ stroke: '#aaa' });
+
+            // windows, some on, some off
+            for (var w = 0; w < config.windows; w++) {
+                var xx = x + (w * 2 + 1) * wwidth;
+                paper
+                    .rect(xx, h - wheight - woff, wwidth, wheight)
+                    .attr(ws[random(0, 1)]);
+            }
+        }
+    };
+
     function draw_wind_arrow() {
         var wind = game.wind;
         paper
