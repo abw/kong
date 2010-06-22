@@ -16,10 +16,14 @@ var Kong = {
         trace:      0,
         speed:      8,           // multiplier for pixels/second * wind speed
         font:       'Sansation',
-        buildings:  10,
-        stories:    16,
-        windows:     6,
-        building_gap: 0,
+        skyline_height:  0.8,    // top of tallest building at 0.8 x height
+	window_height:   0.6,    // window is 0.6 x story (floor) height
+        min_buildings:   8,
+        max_buildings:   12,
+        min_stories:     6,
+        max_stories:     16,
+        windows:         6,
+        building_gap:    0,
         cloud_paths: [
             // Clouds were created as composite paths using Illustrator, 
             // merged and then exported as SVG.  The paths are centred at 
@@ -90,15 +94,23 @@ Raphael.fn.Kong = function (options) {
     function init_game() {
         game = {
             // game counter for stats
-            no:     ++gameno,
+            no:      ++gameno,
             // wind can be up to +ve or -ve max_wind 
-            wind:   random(-config.max_wind, config.max_wind)
+            wind:    random(-config.max_wind, config.max_wind),
+	    // flag indicating the game is on
+	    playing: true
         };
         Kong.debug('init_game() => %o', game);
+
+	draw_background(game);
+	draw_clouds(game);
+	draw_buildings(game);
+	draw_wind_arrow(game);
+
         return game;
     };
 
-    function draw_scene() {
+    function draw_background(game) {
         var sunx = width  * 0.8,
             suny = height * 0.1,
             sunr = height * 0.15,
@@ -108,7 +120,7 @@ Raphael.fn.Kong = function (options) {
 
         Kong.debug('draw_scene()');
 
-        // sun / sky grad
+	// Sun / sky grad
         trace('Add a radial gradient for sky/sun');
         paper
             .circle(sunx, suny, sunx * 2)
@@ -145,11 +157,10 @@ Raphael.fn.Kong = function (options) {
                 gradient:   "r#fac710-#ffeeaa",
                 stroke:     0
             });
+    };
 
-        // clouds - I'd really like to make clouds from composite shapes
-        // but Raphael doesn't support that, so I'm using paths pre-defined
-        // in Illustrator.
-        var cwidth = width / config.clouds;
+    function draw_clouds(game) {
+	var cwidth  = width / config.clouds;
         var cheight = 20;
         var csize   = 60;
         var cspeed  = 1100;
@@ -167,16 +178,6 @@ Raphael.fn.Kong = function (options) {
             cspeed  -= 200;
         }
 
-        // buildings
-        var bwidth  = (width - (config.building_gap * 2)) / config.buildings;
-        for (n = 0; n < config.buildings; n++) {
-            building(
-                n * bwidth, bwidth, Math.round(random(config.stories / 3, config.stories))
-            );
-        }
-
-        // for testing
-        draw_wind_arrow();
     };
 
     function cloud(x, y, size, wind, speed) {
@@ -229,37 +230,45 @@ Raphael.fn.Kong = function (options) {
         return cloud;
     };
 
-    function building(x, width, stories) {
-        var sheight = height * 0.8 / config.stories;
-        var bgap    = config.building_gap;
-        var wwidth  = width / (config.windows * 2 + 1);  // add gaps
-        var wheight = sheight * 0.6;
-        var woff    = sheight * 0.2;
-        var h       = height - stories * sheight; 
-        var ws      = config.window_styles;
+    function draw_buildings(game) {
+	var buildings  = game.buildings = [ ],
+            windows    = game.windows   = [ ],
+            nbuildings = random(config.min_buildings, config.max_buildings),
+            bwidth     = Math.floor(width / nbuildings),
+	    sheight    = height  * config.skyline_height / config.max_stories,
+	    wwidth     = bwidth / (config.windows * 2 + 1),     // inc. gaps between windows
+	    wheight    = sheight * config.window_height,
+	    woffset    = (sheight - wheight) / 2;
 
-        Kong.debug('building: %s,%s  %sx%s', x, height, width, height - stories * sheight);
+        for (var nb = 0; nb < nbuildings; nb++) {
+	    var nstories = random(config.min_stories, config.max_stories),
+		bheight  = nstories * sheight,
+                left     = bwidth * nb,
+                top      = height - bheight,
+		building = paper
+		    .rect(left, top, bwidth, bheight)
+		    .attr(config.building_style);
 
-        // building
-        paper
-            .rect(x, h, width, stories * sheight)
-            .attr(config.building_style);
+	    Kong.debug('%s: building left:%s  top:%s  width:%s  height:%s', nb, left, top, bwidth, bheight);
 
-        for (var i = 0; i < stories; i++) {
-            var hh = height - i * sheight;
+	    for (var ns = 0; ns < nstories; ns++) {
+		var y = top + sheight + ns * sheight;
 
-            // line between floors
-            paper.line(x + wwidth, hh, x + width - wwidth, hh)
-                 .attr({ stroke: '#aaa' });
+		// line between floors
+		paper.line(left + wwidth, y, left + bwidth - wwidth, y)
+		     .attr({ stroke: '#aaa' });
 
-            // windows, some on, some off
-            for (var w = 0; w < config.windows; w++) {
-                var xx = x + (w * 2 + 1) * wwidth;
-                paper
-                    .rect(xx, hh - wheight - woff, wwidth, wheight)
-                    .attr(ws[random(0, 1)]);
-            }
-        }
+		// windows, some on, some off
+		for (var w = 0; w < config.windows; w++) {
+		    var xx = left + (w * 2 + 1) * wwidth;
+		    windows.push(
+		        paper
+			    .rect(xx, y - wheight - woffset, wwidth, wheight)
+			    .attr(config.window_styles[random(0, 1)])
+				 );
+		}
+	    }
+	}
     };
 
     function draw_wind_arrow() {
@@ -290,7 +299,6 @@ Raphael.fn.Kong = function (options) {
 
     function game_loop() {
         init_game();
-        draw_scene();
         play_game();
     };
 
