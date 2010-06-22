@@ -17,7 +17,7 @@ var Kong = {
         speed:      8,           // multiplier for pixels/second * wind speed
         font:       'Sansation',
         skyline_height:  0.8,    // top of tallest building at 0.8 x height
-	window_height:   0.6,    // window is 0.6 x story (floor) height
+        window_height:   0.6,    // window is 0.6 x story (floor) height
         min_buildings:   8,
         max_buildings:   12,
         min_stories:     6,
@@ -97,15 +97,15 @@ Raphael.fn.Kong = function (options) {
             no:      ++gameno,
             // wind can be up to +ve or -ve max_wind 
             wind:    random(-config.max_wind, config.max_wind),
-	    // flag indicating the game is on
-	    playing: true
+            // flag indicating the game is on
+            playing: true
         };
         Kong.debug('init_game() => %o', game);
 
-	draw_background(game);
-	draw_clouds(game);
-	draw_buildings(game);
-	draw_wind_arrow(game);
+    draw_background(game);
+    draw_clouds(game);
+    draw_buildings(game);
+    draw_wind_arrow(game);
 
         return game;
     };
@@ -120,7 +120,7 @@ Raphael.fn.Kong = function (options) {
 
         Kong.debug('draw_scene()');
 
-	// Sun / sky grad
+        // Sun / sky grad
         trace('Add a radial gradient for sky/sun');
         paper
             .circle(sunx, suny, sunx * 2)
@@ -160,7 +160,7 @@ Raphael.fn.Kong = function (options) {
     };
 
     function draw_clouds(game) {
-	var cwidth  = width / config.clouds;
+        var cwidth  = width / config.clouds;
         var cheight = 20;
         var csize   = 60;
         var cspeed  = 1100;
@@ -177,7 +177,6 @@ Raphael.fn.Kong = function (options) {
             csize   -= random(10, csize / 4);
             cspeed  -= 200;
         }
-
     };
 
     function cloud(x, y, size, wind, speed) {
@@ -231,44 +230,44 @@ Raphael.fn.Kong = function (options) {
     };
 
     function draw_buildings(game) {
-	var buildings  = game.buildings = [ ],
+        var buildings  = game.buildings = [ ],
             windows    = game.windows   = [ ],
             nbuildings = random(config.min_buildings, config.max_buildings),
             bwidth     = Math.floor(width / nbuildings),
-	    sheight    = height  * config.skyline_height / config.max_stories,
-	    wwidth     = bwidth / (config.windows * 2 + 1),     // inc. gaps between windows
-	    wheight    = sheight * config.window_height,
-	    woffset    = (sheight - wheight) / 2;
+            sheight    = height  * config.skyline_height / config.max_stories,
+            wwidth     = bwidth / (config.windows * 2 + 1),     // inc. gaps between windows
+            wheight    = sheight * config.window_height,
+            woffset    = (sheight - wheight) / 2;
 
         for (var nb = 0; nb < nbuildings; nb++) {
-	    var nstories = random(config.min_stories, config.max_stories),
-		bheight  = nstories * sheight,
+            var nstories = random(config.min_stories, config.max_stories),
+                bheight  = nstories * sheight,
                 left     = bwidth * nb,
                 top      = height - bheight,
-		building = paper
-		    .rect(left, top, bwidth, bheight)
-		    .attr(config.building_style);
+                building = paper
+                    .rect(left, top, bwidth, bheight)
+                    .attr(config.building_style);
 
-	    Kong.debug('%s: building left:%s  top:%s  width:%s  height:%s', nb, left, top, bwidth, bheight);
+            Kong.debug('%s: building left:%s  top:%s  width:%s  height:%s', nb, left, top, bwidth, bheight);
 
-	    for (var ns = 0; ns < nstories; ns++) {
-		var y = top + sheight + ns * sheight;
+            for (var ns = 0; ns < nstories; ns++) {
+                var y = top + sheight + ns * sheight;
 
-		// line between floors
-		paper.line(left + wwidth, y, left + bwidth - wwidth, y)
-		     .attr({ stroke: '#aaa' });
+                // line between floors
+                paper.line(left + wwidth, y, left + bwidth - wwidth, y)
+                     .attr({ stroke: '#aaa' });
 
-		// windows, some on, some off
-		for (var w = 0; w < config.windows; w++) {
-		    var xx = left + (w * 2 + 1) * wwidth;
-		    windows.push(
-		        paper
-			    .rect(xx, y - wheight - woffset, wwidth, wheight)
-			    .attr(config.window_styles[random(0, 1)])
-				 );
-		}
-	    }
-	}
+                // windows, some on, some off
+                for (var w = 0; w < config.windows; w++) {
+                    var xx = left + (w * 2 + 1) * wwidth;
+                    windows.push(
+                        paper
+                            .rect(xx, y - wheight - woffset, wwidth, wheight)
+                            .attr(config.window_styles[random(0, 1)])
+                                 );
+                }
+            }
+        }
     };
 
     function draw_wind_arrow() {
