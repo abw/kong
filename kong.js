@@ -24,6 +24,7 @@ var Kong = {
         max_stories:     16,
         windows:         6,
         building_gap:    0,
+        player:          ['Player 1', 'Player 2'],
         cloud_paths: [
             // Clouds were created as composite paths using Illustrator, 
             // merged and then exported as SVG.  The paths are centred at 
@@ -55,7 +56,46 @@ var Kong = {
                 stroke:         '#996',
                 'stroke-width': 1
             }
-        ]
+        ],
+        outer_panel_style: {
+            fill:           '#fff',
+            border:         '#000',
+            'stroke-width': 6,
+            opacity:        0.8,
+            'stroke-opacity': 0.8
+        },
+        inner_panel_style: {
+            opacity:        0.8,
+            fill:               '#eee',
+            border:             '#aaa',
+            'border-width':     2
+        },
+        origin_handle_style: {
+            fill:   '#07f',
+            stroke: '#04a',
+            opacity: 0.9,
+            r:       4,
+            'stroke-width': 1
+        },
+        drag_handle_style: {
+            fill:   '#8f8',
+            stroke: '#484',
+            opacity: 0.9,
+            r:       6,
+            'stroke-width': 1
+        },
+        dragging_handle_style: {
+            fill:   '#f70',
+            stroke: '#a40',
+            opacity: 0.7,
+            r:       10,
+            'stroke-width': 1
+        },
+        trajectory_style: {
+            stroke: '#A44',
+            'stroke-width': 2,
+            'stroke-dasharray': '.'
+        }
     },
     debug: (window.console && window.console.log)
         ? function() { window.console.log.apply(window.console, arguments); }
@@ -70,7 +110,6 @@ Raphael.fn.line = function (x1, y1, x2, y2) {
     );
 };
 
-
 Raphael.fn.Kong = function (options) {
     var paper  = this,
         config = jQuery.extend({ }, Kong.defaults, options),
@@ -83,8 +122,14 @@ Raphael.fn.Kong = function (options) {
 
     Kong.debug('Kong %sx%s config: %o', width, height, config);
 
+    var RAD_DEG= Math.PI / 180;
+
     function deg2rad(degrees) {
-        return degrees * Math.PI / 180;
+        return degrees * RAD_DEG;
+    };
+
+    function rad2deg(radians) {
+        return radians / RAD_DEG;
     };
 
     function random(min, max) {
@@ -102,10 +147,11 @@ Raphael.fn.Kong = function (options) {
         };
         Kong.debug('init_game() => %o', game);
 
-    draw_background(game);
-    draw_clouds(game);
-    draw_buildings(game);
-    draw_wind_arrow(game);
+        draw_background(game);
+        draw_clouds(game);
+        draw_buildings(game);
+        draw_wind_arrow(game);
+        draw_player_controls(game);
 
         return game;
     };
@@ -233,7 +279,7 @@ Raphael.fn.Kong = function (options) {
         var buildings  = game.buildings = [ ],
             windows    = game.windows   = [ ],
             nbuildings = random(config.min_buildings, config.max_buildings),
-            bwidth     = Math.floor(width / nbuildings),
+            bwidth     = Math.round(width / nbuildings),
             sheight    = height  * config.skyline_height / config.max_stories,
             wwidth     = bwidth / (config.windows * 2 + 1),     // inc. gaps between windows
             wheight    = sheight * config.window_height,
@@ -264,11 +310,124 @@ Raphael.fn.Kong = function (options) {
                         paper
                             .rect(xx, y - wheight - woffset, wwidth, wheight)
                             .attr(config.window_styles[random(0, 1)])
-                                 );
+                    );
                 }
             }
         }
+
+        function switch_light() {
+            windows[random(0, windows.length)]
+                .attr(config.window_styles[random(0, 1)]);
+            window.setTimeout(switch_light, random(500, 3000));
+        };
+
+        switch_light();
     };
+
+    function draw_player_controls(game) {
+        var pcw    = Math.round(width  / 6),
+            pch    = pcw,
+            margin = 15,
+            ypos   = height - pch - margin;
+
+        game.controls = [
+            player_control(margin, ypos, config.player[0]),
+            player_control(width - pcw - margin, ypos, config.player[1], true)
+        ];
+
+        function player_control(x, y, caption, invert) {
+            var inw   = pcw - margin * 2,        // Inner dimensions are pcw x pch
+                inh   = pch - margin * 2,        // minus margin x 2 (on each side).
+                rr    = inw * inh,
+                minx  = x + margin,
+                miny  = y + margin,
+                maxx  = minx + inw,
+                maxy  = miny + inh,
+                set   = paper.set(),
+                drag  = {
+                    cx: (invert ? (maxx - inw / 2) : (minx + inw / 2)),
+                    cy: miny + inh / 2
+                },
+                line  = [
+                    ["M", invert ? maxx : minx, maxy],
+                    ["L", drag.cx, drag.cy]
+                ],
+                outer, inner, arrow, origin, target;
+
+            function drag_start() {
+                this.ox = this.attr("cx");
+                this.oy = this.attr("cy");
+                this.animate(config.dragging_handle_style, 500, ">");
+            };
+
+            function drag_move(dx, dy) {
+                var x  = this.ox + dx,
+                    y  = this.oy + dy;
+
+                drag.cx
+                    = x < minx ? minx
+                    : x > maxx ? maxx
+                    : x;
+                drag.cy
+                    = y < miny ? miny
+                    : y > maxy ? maxy
+                    : y;
+
+                dx = drag.cx - (invert ? maxx : minx);
+                dy = maxy - drag.cy;
+                var len = dx * dx + dy * dy;
+
+                if (len > rr) {
+                    var rad = Math.atan(dx / dy);
+                    dx = Math.sin(rad) * inw;
+                    dy = Math.cos(rad) * inh;
+                    drag.cx = (invert ? maxx : minx) + dx;
+                    drag.cy = maxy - dy;
+                }
+
+                line[1][1] = drag.cx;
+                line[1][2] = drag.cy;
+                arrow.attr({ path: line });
+
+                this.attr(drag);
+            };
+
+            function drag_stop() {
+                this.animate(config.drag_handle_style, 500, ">");
+            };
+
+            // outer window
+            outer = paper.rect(x, y, pcw, pch, 15)
+                 .attr(config.outer_panel_style);
+
+            // inner window
+            inner = paper.path(
+                'M' + (invert ? maxx : minx) + ',' + maxy +
+                'V' + miny +
+                'A' + inw + ',' + inh + (invert ? ',0,0,0,' : ',0,0,1,')
+                    + (invert ? minx : maxx) + ',' + maxy +
+                'Z'
+            ).attr(config.inner_panel_style);
+
+            arrow = paper
+                .path(line)
+                .attr(config.trajectory_style);
+
+            // targetting arrow origin
+            origin = paper.circle(invert ? maxx : minx, maxy, 5)
+                .attr(config.origin_handle_style);
+
+            // targetting arrow draggable end
+            target = paper.circle(drag.cx, drag.cy, 4)
+                .attr(config.drag_handle_style)
+                .drag(drag_move, drag_start, drag_stop);
+
+            set.push(outer, inner, arrow, origin, target);
+
+            return set;
+        };
+    };
+
 
     function draw_wind_arrow() {
         var wind = game.wind;
