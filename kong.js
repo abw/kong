@@ -67,9 +67,11 @@ var Kong = {
         },
         inner_panel_style: {
             opacity:        0.8,
-            fill:               '#eee',
-            border:             '#aaa',
-            'border-width':     2
+            fill:               '#e8e8ff',
+//            border:             '#aaa',
+            stroke:             '#aac',
+            'stroke-width':     2,
+            'stroke-linejoin': 'round'
         },
         origin_handle_style: {
             fill:   '#07f',
@@ -99,9 +101,9 @@ var Kong = {
             'stroke-width': 1
         },
         trajectory_style: {
-            stroke: '#A44',
+            stroke: '#4AA',
             'stroke-width': 2,
-            'stroke-dasharray': '.'
+            'stroke-dasharray': '-'
         },
         button_style: {
             fill:   '#8f8',
