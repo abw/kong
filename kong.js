@@ -16,6 +16,7 @@ var Kong = {
         trace:      0,
         speed:      8,           // multiplier for pixels/second * wind speed
         font:       'Sansation',
+        launch:          'Launch',
         skyline_height:  0.8,    // top of tallest building at 0.8 x height
         window_height:   0.6,    // window is 0.6 x story (floor) height
         min_buildings:   8,
@@ -61,7 +62,7 @@ var Kong = {
             fill:           '#fff',
             border:         '#000',
             'stroke-width': 6,
-            opacity:        0.8,
+            opacity:        0.85,
             'stroke-opacity': 0.8
         },
         inner_panel_style: {
@@ -84,6 +85,12 @@ var Kong = {
             r:       6,
             'stroke-width': 1
         },
+        drag_hover_style: {
+            fill:   '#f70',
+            stroke: '#a40',
+            opacity: 0.9,
+            'stroke-width': 1
+        },
         dragging_handle_style: {
             fill:   '#f70',
             stroke: '#a40',
@@ -95,6 +102,27 @@ var Kong = {
             stroke: '#A44',
             'stroke-width': 2,
             'stroke-dasharray': '.'
+        },
+        button_style: {
+            fill:   '#8f8',
+            stroke: '#484',
+            opacity: 0.8,
+            'stroke-width': 1
+        },
+        button_hover_style: {
+            fill:   '#f70',
+            stroke: '#a40',
+            opacity: 0.9
+        },
+        launch_style: {
+            fill: '#262',
+            'stroke-width': 0,
+            'font-size': 16
+        },
+        launch_hover_style: {
+            fill: '#fff',
+            'stroke-width': 0,
+            'font-size': 16
         }
     },
     debug: (window.console && window.console.log)
@@ -325,9 +353,10 @@ Raphael.fn.Kong = function (options) {
     };
 
     function draw_player_controls(game) {
-        var pcw    = Math.round(width  / 6),
-            pch    = pcw,
-            margin = 15,
+        var margin = 15,
+            status = 20,
+            pcw    = Math.round(width  / 6),
+            pch    = pcw + status * 2 + margin,
             ypos   = height - pch - margin;
 
         game.controls = [
@@ -337,10 +366,10 @@ Raphael.fn.Kong = function (options) {
 
         function player_control(x, y, caption, invert) {
             var inw   = pcw - margin * 2,        // Inner dimensions are pcw x pch
-                inh   = pch - margin * 2,        // minus margin x 2 (on each side).
-                rr    = inw * inh,
+                inh   = inw,
+                rr    = inw * inw,
                 minx  = x + margin,
-                miny  = y + margin,
+                miny  = y + status + margin,
                 maxx  = minx + inw,
                 maxy  = miny + inh,
                 set   = paper.set(),
@@ -352,11 +381,12 @@ Raphael.fn.Kong = function (options) {
                     ["M", invert ? maxx : minx, maxy],
                     ["L", drag.cx, drag.cy]
                 ],
-                outer, inner, arrow, origin, target;
+                outer, inner, arrow, origin, target, button, launch;
 
             function drag_start() {
                 this.ox = this.attr("cx");
                 this.oy = this.attr("cy");
+                this.dragging = true;
                 this.animate(config.dragging_handle_style, 500, ">");
             };
 
@@ -394,6 +424,17 @@ Raphael.fn.Kong = function (options) {
 
             function drag_stop() {
                 this.animate(config.drag_handle_style, 500, ">");
+                this.dragging = false;
+            };
+
+            function mouseover() {
+                if (! this.dragging)
+                    this.animate(config.drag_hover_style, 500, ">");
+            };
+
+            function mouseout() {
+                if (! this.dragging)
+                    this.animate(config.drag_handle_style, 500, ">");
             };
 
             // outer window
@@ -409,6 +450,7 @@ Raphael.fn.Kong = function (options) {
                 'Z'
             ).attr(config.inner_panel_style);
 
+            // trajectory line
             arrow = paper
                 .path(line)
                 .attr(config.trajectory_style);
@@ -420,14 +462,71 @@ Raphael.fn.Kong = function (options) {
             // targetting arrow draggable end
             target = paper.circle(drag.cx, drag.cy, 4)
                 .attr(config.drag_handle_style)
-                .drag(drag_move, drag_start, drag_stop);
+                .drag(drag_move, drag_start, drag_stop)
+                .mouseover(mouseover)
+                .mouseout(mouseout);
 
-            set.push(outer, inner, arrow, origin, target);
+            // button - rather tedious having to build buttons from scratch...
+            var hovering = false;
+            var bypos    = y + inh + status + margin * 2;
+            var fader;
+
+            function hover() {
+                if (! hovering) {
+                    hovering = true;
+                    button.animate(config.button_hover_style, 200, ">");
+                    launch.animateWith(button, config.launch_hover_style, 200, ">");
+                }
+            };
+
+            function unhover() {
+                if (hovering) {
+                    hovering = false;
+                    button.animate(config.button_style, 500, ">");
+                    launch.animateWith(button, config.launch_style, 500, ">");
+                }
+            };
+
+            function click() {
+                var dx  = invert ? maxx - drag.cx : drag.cx - minx;
+                var dy  = maxy - drag.cy;
+                var deg = Math.round(rad2deg(Math.atan(dy / dx)));
+                var len = dx * dx + dy * dy;
+                var max = inw * inw;
+                var str = Math.round(len / max * 100);
+                console.log("%s launched  angle:%s  strength:%s%  dx:%s  dy:%s", caption, deg, str, dx, dy);
+                alert(caption + " launched a banana\nangle: " + deg + '°  strength: ' + str + '%' );
+            };
+
+            button = paper
+                .rect(x + margin, bypos, inw, status, 5)
+                .attr(config.button_style)
+                .mouseover(hover)
+                .mouseout(unhover)
+                .click(click);
+
+            launch = paper
+                .text(
+                    x + margin + inw / 2, bypos + status / 2,
+                    config.launch
+                )
+                .attr(config.launch_style)
+                .mouseover(hover)
+                .mouseout(unhover)
+                .click(click);
+
+            set.push(
+                outer, inner, arrow, origin, target,
+                button, launch,
+                // "Player N" caption
+                paper
+                    .text(x + margin + inw / 2, y + margin / 2 + 10, caption)
+                    .attr({ 'font-size': 20, fill: '#444' })
+            );
 
             return set;
         };
     };
-
 
     function draw_wind_arrow() {
         var wind = game.wind;
